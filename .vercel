@@ -1,0 +1,10 @@
+version: '2'
+services:
+  app:
+    build: .
+    ports:
+      - 3000:3000
+    env:
+      VERCEL_KV_NAME: ${VERCEL_KV_NAME}
+    vercel:
+      kvStore: true
