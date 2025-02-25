@@ -1,58 +1,39 @@
 const express = require("express");
-const app = express();
-const dotenv = require("dotenv");
-dotenv.config();
+const { Redis } = require("@upstash/redis");
 
-// Get the status from Vercel KV store
+const app = express();
+app.use(express.json());
+
+// Initialize Upstash Redis client
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL, // e.g., "https://global-redis.upstash.io"
+  token: process.env.KV_REST_API_TOKEN, // your Upstash token
+});
+
+const STATUS_KEY = "homeStatus";
+
+// Endpoint to read your status
 app.get("/status", async (req, res) => {
   try {
-    const { KEY } = process.env;
-    const response = await fetch(
-      `https://${process.env.VERCEL_DOMAIN}/kv/${KEY}`,
-    );
-    if (!response.ok) {
-      throw new Error("Failed to get status from Vercel KV store");
+    const status = await redis.get(STATUS_KEY);
+    res.json({ status });
+  } catch (err) {
+    console.error("Error reading status:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoint to update your status (from webhook events)
+app.post("/status", async (req, res) => {
+  try {
+    const { status } = req.body; // Expecting a value like "home" or "away"
+    if (!status) {
+      return res.status(400).json({ error: "Status value is required" });
     }
-    const statusCode = await response.json();
-    res.status(statusCode).send(statusCode);
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .send({ error: "Failed to get status from Vercel KV store" });
+    await redis.set(STATUS_KEY, status);
+    res.json({ message: "Status updated", status });
+  } catch (err) {
+    console.error("Error updating status:", err);
+    res.status(500).json({ error: err.message });
   }
-});
-
-// Set the status to 'away'
-app.post("/status/away", async (req, res) => {
-  try {
-    const { KEY } = process.env;
-    await fetch(`https://${process.env.VERCEL_DOMAIN}/kv/${KEY}`, {
-      method: "PUT",
-      body: JSON.stringify({ value: "away" }),
-    });
-    res.status(200).send({ message: 'Status set to "away"' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: 'Failed to set status to "away"' });
-  }
-});
-
-// Set the status to 'home'
-app.post("/status/home", async (req, res) => {
-  try {
-    const { KEY } = process.env;
-    await fetch(`https://${process.env.VERCEL_DOMAIN}/kv/${KEY}`, {
-      method: "PUT",
-      body: JSON.stringify({ value: "home" }),
-    });
-    res.status(200).send({ message: 'Status set to "home"' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: 'Failed to set status to "home"' });
-  }
-});
-
-app.listen(3000, () => {
-  console.log("Server listening on port 3000");
 });
