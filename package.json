@@ -13,7 +13,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "echo \"No build step required\""
+    "build": "node -v"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
