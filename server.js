@@ -1,5 +1,6 @@
 const express = require("express");
 const { Redis } = require("@upstash/redis");
+require('dotenv').config();
 
 const app = express();
 app.use(express.json());
@@ -37,3 +38,14 @@ app.post("/status", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Add this for local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;
