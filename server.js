@@ -24,13 +24,15 @@ app.get("/status", async (req, res) => {
   }
 });
 
-// Endpoint to update your status (from webhook events)
+// Endpoint to update your status (from Geofency webhook)
 app.post("/status", async (req, res) => {
   try {
-    const { status } = req.body; // Expecting a value like "home" or "away"
-    if (!status) {
-      return res.status(400).json({ error: "Status value is required" });
-    }
+    // Geofency sends: entry = 1 for entering, entry = 0 for leaving
+    const entry = req.body.entry;
+    
+    // Convert Geofency's entry/exit to home/away status
+    const status = entry === "1" ? "home" : "away";
+    
     await redis.set(STATUS_KEY, status);
     res.json({ message: "Status updated", status });
   } catch (err) {
@@ -39,13 +41,13 @@ app.post("/status", async (req, res) => {
   }
 });
 
-// Add this for local development
-if (process.env.NODE_ENV !== 'production') {
+// For local development
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 }
 
-// Export for Vercel
+// Export the Express app for Vercel
 module.exports = app;
